@@ -15,7 +15,7 @@ The main goals and purpose of this project:
 
 Conventions (or limitations, if you like to call it that):
 
-- The `Request` and `Response` classes must JSON models
+- The `Request` and `Response` classes must be JSON models
 - The JSON models must contain a constructor like `formJson(Map json)`
 - The JSON models must contain an instance method like `Map<String, dynamic> toJson()`
 - The RPC methods must be declared like `Future<Response> Function(Request)`
