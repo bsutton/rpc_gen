@@ -1,5 +1,5 @@
 // Import RPC annotation metadata
-import 'package:rpc_gen/rpc.dart';
+import 'package:rpc_gen/rpc_meta.dart';
 
 // Import used JSON models
 import 'example_objects.dart';
@@ -13,6 +13,8 @@ part 'example_rpc.g.dart';
 // Path to our service
 const _path = '/example_api/v1/';
 
+// The "host" and "path" parameters must be specified, but this is only
+// configuration (which can be ignored)
 @RpcService(host: 'http://localhost', port: 8002)
 abstract class ExampleApi {
   @RpcMethod(path: _path + 'add')

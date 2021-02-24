@@ -8,7 +8,7 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/visitor.dart';
 import 'package:build/src/builder/build_step.dart';
 import 'package:code_builder/code_builder.dart';
-import 'package:rpc_gen/rpc.dart';
+import 'package:rpc_gen/rpc_meta.dart';
 import 'package:source_gen/source_gen.dart';
 
 class RpcGenerator extends GeneratorForAnnotation<RpcService> {

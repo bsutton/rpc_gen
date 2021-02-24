@@ -16,9 +16,10 @@ The main goals and purpose of this project:
 Conventions (of limitations, if you like to call it that):
 
 - The `Request` and `Response` classes must JSON models
-- JSON models must contain a constructor like `formJson(Map json)`
-- JSON models must contain an instance method like `Map<String, dynamic> toJson()`
-- RPC methods must be declared like `Future<Response> Function(Request)`
+- The JSON models must contain a constructor like `formJson(Map json)`
+- The JSON models must contain an instance method like `Map<String, dynamic> toJson()`
+- The RPC methods must be declared like `Future<Response> Function(Request)`
+- The RPC service metadata class (interface) should contain nothing but methods
 
 Example:
 
@@ -37,7 +38,7 @@ First you need to describe the interaction interfaces:
 
 ```dart
 // Import RPC annotation metadata
-import 'package:rpc_gen/rpc.dart';
+import 'package:rpc_gen/rpc_meta.dart';
 
 // Import used JSON models
 import 'example_objects.dart';
@@ -51,6 +52,8 @@ part 'example_rpc.g.dart';
 // Path to our service
 const _path = '/example_api/v1/';
 
+// The "host" and "path" parameters must be specified, but this is only
+// configuration (which can be ignored)
 @RpcService(host: 'http://localhost', port: 8002)
 abstract class ExampleApi {
   @RpcMethod(path: _path + 'add')
@@ -76,6 +79,7 @@ List of generated classes:
 - ExampleApiUtils
 
 All of these classes contain stubs for client and server procedures.  
+
 An interface is also generated for organizing the sending of calls from the client to the server (the so-called transport). You write yourself the implementation you need and, in particular, you can create a universal base transport class if you need to work with different services (API).
 
 And, of course, for the convenience of processing on the server, convenient metadata classes for the procedures used have been created. This gives maximum flexibility in the choice of processing methods. They are also available on the client and can be used in transport class (and not only there) if you need it.
