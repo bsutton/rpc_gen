@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      rpc_gen:
+        enabled: true
+
+builders:
+  rpc_gen:
+    target: ":rpc_builder"
+    import: "package:rpc_gen/rpc_builder.dart"
+    builder_factories: ["rpcBuilder"]
+    build_extensions: {".dart": [".rpc_gen.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
