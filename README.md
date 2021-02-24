@@ -13,7 +13,7 @@ The main goals and purpose of this project:
 - Maximum flexibility in the choice of how to send and handle procedure calls
 - Easily maintenance of consistency of source code for procedures on both layers
 
-Conventions (of limitations, if you like to call it that):
+Conventions (or limitations, if you like to call it that):
 
 - The `Request` and `Response` classes must JSON models
 - The JSON models must contain a constructor like `formJson(Map json)`
@@ -200,7 +200,7 @@ abstract class ExampleApiUtils {
 
 ```
 
-Not much code, but you would have to write all this code (or similar) by hand whenever you make a change. But now there is no need to do this, the generator will do everything for you and for you.  
+Not much code, but you would have to write all this code (or similar) by hand whenever you make a change. But now there is no need to do this, the generator will do everything for you.  
 
 Finally, an example of how these classes can be used with maximum efficiency.  
 
