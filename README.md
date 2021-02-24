@@ -4,7 +4,7 @@ The `rpc_gen` is a builder and generator of RPC (Remote Procedure Call) stub fil
 
 ATTENTION: Under development
 
-Version 0.1.0
+Version 0.1.1
 
 The main goals and purpose of this project:
 
@@ -239,8 +239,8 @@ Future<void> _runCleint() async {
   final y = 3;
   final res1 = await client.add(AddRequest(arg1: x, arg2: y));
   print('add($x,$y) = ${res1.result}');
-  final z = true;
   //
+  final z = true;
   final res2 = await client.not(NotRequest(arg: true));
   print('not($z) = ${res2.result}');
   //
@@ -254,9 +254,9 @@ Future<void> _runCleint() async {
 Future<void> _serve() async {
   final app = App();
   app.db = 'use db...';
-  final wevServer =
+  final webServer =
       await HttpServer.bind(InternetAddress.anyIPv4, ExampleApiConfig.port);
-  await for (final request in wevServer) {
+  await for (final request in webServer) {
     final response = request.response;
     try {
       final path = request.uri.path;
