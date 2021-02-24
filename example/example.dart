@@ -44,7 +44,7 @@ Future<void> _runCleint() async {
 // Client runner, for demonstration only
 Future<void> _serve() async {
   final app = App();
-  app.db = 'use db...';  
+  app.db = 'use db...';
   final wevServer =
       await HttpServer.bind(InternetAddress.anyIPv4, ExampleApiConfig.port);
   await for (final request in wevServer) {

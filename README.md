@@ -24,9 +24,9 @@ Example:
 
 Let's say we need to organize and coordinate the call of the following remote procedures:
 
-- Future<AddResponse> add(AddRequest request);
-- Future<NotResponse> not(NotRequest request)
-- Future<VoidResponse> void_(VoidRequest request);
+- `Future<AddResponse> add(AddRequest request)`
+- `Future<NotResponse> not(NotRequest request)`
+- `Future<VoidResponse> void_(VoidRequest request)`
 
 How can we quickly organize client-server interactions?  
 What if we need not 3 procedures, but much more?  
