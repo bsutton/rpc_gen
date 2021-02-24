@@ -232,7 +232,7 @@ const secretToken = '123';
 
 String? globalSecret;
 
-// Web server, for demonstration only
+// Client runner, for demonstration only
 Future<void> _runCleint() async {
   final client = Client();
   final x = 2;
@@ -250,10 +250,10 @@ Future<void> _runCleint() async {
   print('void($name) = ${res3.result}');
 }
 
-// Client runner, for demonstration only
+// Web server, for demonstration only
 Future<void> _serve() async {
   final app = App();
-  app.db = 'use db...';  
+  app.db = 'use db...';
   final wevServer =
       await HttpServer.bind(InternetAddress.anyIPv4, ExampleApiConfig.port);
   await for (final request in wevServer) {
@@ -346,15 +346,14 @@ class ClientTransport extends ExampleApiTransport {
 
 // Server implementation
 class Server extends ExampleApiServer {
-  final HttpRequest _request;
-
-  Server(App app, this._request) : super(ServerHandler(app, _request));
+  Server(App app, HttpRequest _request) : super(ServerHandler(app, _request));
 }
 
 // Server handler implementation
 class ServerHandler extends ExampleApi {
   final App _app;
 
+  // Can be used to access session data
   final HttpRequest _request;
 
   ServerHandler(this._app, this._request);
