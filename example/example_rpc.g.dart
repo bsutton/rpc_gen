@@ -61,7 +61,8 @@ abstract class ExampleApiServer {
 
   final ExampleApi _handler;
 
-  Future<Map> handle(String method, Map json) async {
+  Future<Map<String, dynamic>> handle(
+      String method, Map<String, dynamic> json) async {
     switch (method) {
       case 'add':
         final request = AddRequest.fromJson(json);
@@ -82,7 +83,8 @@ abstract class ExampleApiServer {
 }
 
 abstract class ExampleApiTransport {
-  Future<Map> send(String method, String path, Map request);
+  Future<Map<String, dynamic>> send(
+      String method, String path, Map<String, dynamic> request);
 }
 
 abstract class ExampleApiUtils {

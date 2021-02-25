@@ -395,13 +395,13 @@ class _ServerGenerator {
     code.add(Code('}'));
     return Method((b) => b
       ..modifier = MethodModifier.async
-      ..returns = refer('Future<Map>')
+      ..returns = refer('Future<Map<String, dynamic>>')
       ..name = 'handle'
       ..requiredParameters.add(Parameter((b) => b
         ..type = refer('String')
         ..name = 'method'))
       ..requiredParameters.add(Parameter((b) => b
-        ..type = refer('Map')
+        ..type = refer('Map<String, dynamic>')
         ..name = 'json'))
       ..body = Block.of(code));
   }
@@ -415,7 +415,7 @@ class _TransportGenerator {
   Class generate() {
     final methods = <Method>[];
     final method = Method((b) => b
-      ..returns = refer('Future<Map>')
+      ..returns = refer('Future<Map<String, dynamic>>')
       ..name = 'send'
       ..requiredParameters.add(Parameter((b) => b
         ..type = refer('String')
@@ -424,7 +424,7 @@ class _TransportGenerator {
         ..type = refer('String')
         ..name = 'path'))
       ..requiredParameters.add(Parameter((b) => b
-        ..type = refer('Map')
+        ..type = refer('Map<String, dynamic>')
         ..name = 'request')));
     methods.add(method);
     return Class((b) => b

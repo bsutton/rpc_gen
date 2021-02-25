@@ -5,7 +5,7 @@ class AddRequest {
 
   AddRequest({required this.arg1, required this.arg2});
 
-  factory AddRequest.fromJson(Map json) {
+  factory AddRequest.fromJson(Map<String, dynamic> json) {
     return AddRequest(arg1: json['arg1'] as int, arg2: json['arg2'] as int);
   }
 
@@ -19,7 +19,7 @@ class AddResponse {
 
   AddResponse({required this.result});
 
-  factory AddResponse.fromJson(Map json) {
+  factory AddResponse.fromJson(Map<String, dynamic> json) {
     return AddResponse(result: json['result'] as int);
   }
 
@@ -33,7 +33,7 @@ class NotRequest {
 
   NotRequest({required this.arg});
 
-  factory NotRequest.fromJson(Map json) {
+  factory NotRequest.fromJson(Map<String, dynamic> json) {
     return NotRequest(arg: json['arg'] as bool);
   }
 
@@ -47,7 +47,7 @@ class NotResponse {
 
   NotResponse({required this.result});
 
-  factory NotResponse.fromJson(Map json) {
+  factory NotResponse.fromJson(Map<String, dynamic> json) {
     return NotResponse(result: json['result'] as bool);
   }
 
@@ -61,7 +61,7 @@ class VoidRequest {
 
   VoidRequest({required this.name});
 
-  factory VoidRequest.fromJson(Map json) {
+  factory VoidRequest.fromJson(Map<String, dynamic> json) {
     return VoidRequest(name: json['name'] as String);
   }
 
@@ -75,7 +75,7 @@ class VoidResponse {
 
   VoidResponse({required this.result});
 
-  factory VoidResponse.fromJson(Map json) {
+  factory VoidResponse.fromJson(Map<String, dynamic> json) {
     return VoidResponse(result: json['result'] as String);
   }
 

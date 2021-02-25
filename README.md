@@ -16,7 +16,7 @@ The main goals and purpose of this project:
 Conventions (or limitations, if you like to call it that):
 
 - The `Request` and `Response` classes must be JSON models
-- The JSON models must contain a constructor like `formJson(Map json)`
+- The JSON models must contain a constructor like `fromJson(Map<String, dynamic> json)`
 - The JSON models must contain an instance method like `Map<String, dynamic> toJson()`
 - The RPC methods must be declared like `Future<Response> Function(Request)`
 - The RPC service metadata class (interface) should contain nothing but methods
@@ -152,7 +152,8 @@ abstract class ExampleApiServer {
 
   final ExampleApi _handler;
 
-  Future<Map> handle(String method, Map json) async {
+  Future<Map<String, dynamic>> handle(
+      String method, Map<String, dynamic> json) async {
     switch (method) {
       case 'add':
         final request = AddRequest.fromJson(json);
@@ -173,7 +174,8 @@ abstract class ExampleApiServer {
 }
 
 abstract class ExampleApiTransport {
-  Future<Map> send(String method, String path, Map request);
+  Future<Map<String, dynamic>> send(
+      String method, String path, Map<String, dynamic> request);
 }
 
 abstract class ExampleApiUtils {
@@ -274,14 +276,22 @@ Future<void> _serve() async {
         }
 
         final source = await utf8.decodeStream(request);
-        final json = jsonDecode(source);
-        if (json is Map) {
+        final object = jsonDecode(source);
+        if (object is Map) {
           final server = Server(app, request);
-          final object = await server.handle(proc.name, json);
-          response.write(jsonEncode(object));
+          late Map<String, dynamic> json;
+          try {
+            json = object.cast<String, dynamic>();
+          } catch (e) {
+            throw StateError(
+                'Argument for method \'${proc.name}\' is not valid JSON object}');
+          }
+
+          final result = await server.handle(proc.name, json);
+          response.write(jsonEncode(result));
         } else {
           throw StateError(
-              'Wrong argument type for method \'${proc.name}\': ${json.runtimeType}');
+              'Wrong argument type for method \'${proc.name}\': ${object.runtimeType}');
         }
       } else {
         response.statusCode = 404;
@@ -311,7 +321,8 @@ class Client extends ExampleApiClient {
 // Client transport implementation
 class ClientTransport extends ExampleApiTransport {
   @override
-  Future<Map> send(String method, String path, Map request) async {
+  Future<Map<String, dynamic>> send(
+      String method, String path, Map<String, dynamic> request) async {
     if (method != 'POST') {
       throw UnimplementedError('Oops!!! Method \'$method\' unimplemented');
     }
@@ -333,7 +344,7 @@ class ClientTransport extends ExampleApiTransport {
 
     final json = jsonDecode(req.body);
     if (json is Map) {
-      return json;
+      return json.cast<String, dynamic>();
     }
 
     throw StateError('Rpc error: Wrong response value');

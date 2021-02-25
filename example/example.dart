@@ -65,14 +65,22 @@ Future<void> _serve() async {
         }
 
         final source = await utf8.decodeStream(request);
-        final json = jsonDecode(source);
-        if (json is Map) {
+        final object = jsonDecode(source);
+        if (object is Map) {
           final server = Server(app, request);
-          final object = await server.handle(proc.name, json);
-          response.write(jsonEncode(object));
+          late Map<String, dynamic> json;
+          try {
+            json = object.cast<String, dynamic>();
+          } catch (e) {
+            throw StateError(
+                'Argument for method \'${proc.name}\' is not valid JSON object}');
+          }
+
+          final result = await server.handle(proc.name, json);
+          response.write(jsonEncode(result));
         } else {
           throw StateError(
-              'Wrong argument type for method \'${proc.name}\': ${json.runtimeType}');
+              'Wrong argument type for method \'${proc.name}\': ${object.runtimeType}');
         }
       } else {
         response.statusCode = 404;
@@ -102,7 +110,8 @@ class Client extends ExampleApiClient {
 // Client transport implementation
 class ClientTransport extends ExampleApiTransport {
   @override
-  Future<Map> send(String method, String path, Map request) async {
+  Future<Map<String, dynamic>> send(
+      String method, String path, Map<String, dynamic> request) async {
     if (method != 'POST') {
       throw UnimplementedError('Oops!!! Method \'$method\' unimplemented');
     }
@@ -124,7 +133,7 @@ class ClientTransport extends ExampleApiTransport {
 
     final json = jsonDecode(req.body);
     if (json is Map) {
-      return json;
+      return json.cast<String, dynamic>();
     }
 
     throw StateError('Rpc error: Wrong response value');
