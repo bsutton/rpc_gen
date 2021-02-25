@@ -143,6 +143,7 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
     }
 
     DartObject value;
+    // TODO: Check number of annotations
     for (final annotation in element.metadata) {
       value = annotation.computeConstantValue();
       final valueType = value.type.element;
