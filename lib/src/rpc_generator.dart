@@ -101,7 +101,7 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
   @override
   void visitClassElement(ClassElement element) {
     if (!element.isAbstract) {
-      _error('Class should be declared as abstract');
+      _error('Class \'$name\' must be declared as abstract');
     }
   }
 
@@ -109,24 +109,26 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
   void visitConstructorElement(ConstructorElement element) {
     final elementName = element.name.isEmpty ? name : element.name;
     if (element.parameters.isNotEmpty || elementName != name) {
-      _error('Class should not declare a constructor \'${element.name}\'');
+      _error(
+          'Class \'$name\' must not declare a constructor \'${element.name}\'');
     }
   }
 
   @override
   void visitFieldElement(FieldElement element) {
-    _error('Class should not declare a field \'${element.name}\'');
+    _error('Class \'$name\' must not declare a field \'${element.name}\'');
   }
 
   @override
   void visitMethodElement(MethodElement element) {
+    final fullMethodName = '$name.${element.name}';
     final parameters = element.parameters;
     if (parameters.length != 1) {
-      _error('Method should declare one parameter');
+      _error('Method \'$fullMethodName\' must declare one parameter');
     }
 
     if (element.isPrivate) {
-      _error('Method \'${element.name}\' should not be declared as private');
+      _error('Method \'$fullMethodName\' must not be declared as private');
     }
 
     final parameter = element.parameters.first;
@@ -134,35 +136,40 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
     final returnType = element.returnType;
     if (!returnType.isDartAsyncFuture) {
       _error(
-          'Method \'${element.name}\' should be declared as returns \'Future\'');
+          'Method \'$fullMethodName\' must be declared with return type \'Future\'');
     }
 
     if (_TypeInfo.getTypeArguments(returnType).length != 1) {
       _error(
-          'Method \'${element.name}\' should not be declared as returns \'$returnType\'');
+          'Method \'$fullMethodName\' must not be declared with return type \'$returnType\'');
     }
 
-    DartObject value;
-    // TODO: Check number of annotations
+    final metadata = <DartObject>[];
     for (final annotation in element.metadata) {
-      value = annotation.computeConstantValue();
-      final valueType = value.type.element;
-      if (valueType.library == value.type.element.library) {
-        if (valueType.displayName == '$RpcMethod') {
-          break;
+      final constant = annotation.computeConstantValue();
+      final constantType = constant.type.element;
+      if (constantType.library == constant.type.element.library) {
+        if (constantType.displayName == '$RpcMethod') {
+          metadata.add(constant);
         }
       }
     }
 
-    if (value == null) {
+    if (metadata.isEmpty) {
       _error(
-          'Method \'${element.name}\' should be declared with annotation \'$RpcMethod\'');
+          'Method \'$fullMethodName\' must be declared with annotation \'@$RpcMethod\'');
     }
 
+    if (metadata.length > 1) {
+      _error(
+          'Method \'$fullMethodName\' must be declared with only one annotation \'@$RpcMethod\'');
+    }
+
+    final value = metadata.first;
     void checkParameter(DartObject field, String name) {
       if (field.isNull) {
         _error(
-            'Method \'${element.name}\' should specify \'$RpcMethod.$name\' parameter');
+            'Method \'$fullMethodName\' must specify \'@$RpcMethod.$name\' parameter');
       }
     }
 

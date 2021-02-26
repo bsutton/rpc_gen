@@ -1,6 +1,6 @@
 ## 0.1.2
 
-- In development
+- Minor source code improvements
 
 ## 0.1.1
 
