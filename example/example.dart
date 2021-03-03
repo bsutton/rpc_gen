@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as _http;
+import 'package:rpc_gen/rpc_http_transport.dart';
+import 'package:rpc_gen/rpc_meta.dart';
 
 import 'example_rpc.dart';
 
@@ -17,6 +19,8 @@ void main() async {
   await _serve();
 }
 
+bool development = true;
+
 const secretHeaderKey = 'SECRET';
 
 const secretToken = '123';
@@ -26,36 +30,27 @@ String? globalSecret;
 /// Client runner, for demonstration only
 Future<void> _runCleint() async {
   final client = Client();
+  globalSecret = secretToken;
   final x = 2;
   final y = 3;
-  final res1 = await client.add(AddRequest(arg1: x, arg2: y));
-  print('add($x,$y) = ${res1.result}');
-  //
-  final z = true;
-  final res2 = await client.not(NotRequest(arg: true));
-  print('not($z) = ${res2.result}');
-  //
-  globalSecret = secretToken;
-  final name = 'Jack';
-  final res3 = await client.void_(VoidRequest(name: name));
-  print('void($name) = ${res3.result}');
+  final res1 = await client.add(x: x, y: y);
+  print('add($x,$y) = ${res1}');
 }
 
 /// Web server, for demonstration only
 Future<void> _serve() async {
-  final app = App();
-  app.db = 'use db...';
-  final webServer =
-      await HttpServer.bind(InternetAddress.anyIPv4, ExampleApiConfig.port);
+  final webServer = await HttpServer.bind(
+      InternetAddress.anyIPv4, ExampleApiConfig.serverPort!);
   await for (final request in webServer) {
     final response = request.response;
     try {
       final path = request.uri.path;
-      final procs = ExampleApiUtils.getMethods()
+      final methods = ExampleApiUtils.getMethods()
           .where((e) => e.path == path && e.method == request.method);
-      if (procs.isNotEmpty) {
-        final proc = procs.first;
-        if (proc.authorize) {
+      if (methods.isNotEmpty) {
+        final handler = ServerHandler();
+        final method = methods.first;
+        if (method.authorize) {
           if (request.headers.value(secretHeaderKey) != secretToken) {
             response.statusCode = 401;
             throw 'Unauthorized access';
@@ -65,24 +60,10 @@ Future<void> _serve() async {
         }
 
         final source = await utf8.decodeStream(request);
-        final object = jsonDecode(source);
-        if (object is Map) {
-          final server = Server(app, request);
-          late Map<String, dynamic> json;
-          try {
-            json = object.cast<String, dynamic>();
-          } catch (e) {
-            throw StateError(
-                'Argument for method \'${proc.name}\' is not valid JSON object}');
-          }
-
-          final result = await server.handle(proc.name, json);
-          response.headers.add('Content-Type', 'application/json');
-          response.write(jsonEncode(result));
-        } else {
-          throw StateError(
-              'Wrong argument type for method \'${proc.name}\': ${object.runtimeType}');
-        }
+        final data = jsonDecode(source);
+        final result = await handler.handle(method.name, data);
+        response.headers.add('Content-Type', 'application/json');
+        response.write(jsonEncode(result));
       } else {
         response.statusCode = 404;
       }
@@ -95,25 +76,37 @@ Future<void> _serve() async {
 }
 
 /// Transport, for demonstration only
-class Transport {
+abstract class Transport extends RpcHttpTransport<_Request, _http.Response> {
   final String host;
 
   final int? port;
 
   Transport({required this.host, this.port});
 
-  Future<Map<String, dynamic>> send(
-      String method, String path, Map<String, dynamic> request) async {
-    if (method != 'POST') {
-      throw UnimplementedError('Oops!!! Method \'$method\' unimplemented');
+  @override
+  Future<_http.Response> post(_Request request, data) {
+    return _http.post(request.uri,
+        body: jsonEncode(data), headers: request.headers);
+  }
+
+  @override
+  Future postprocess(_Request request, _http.Response response) async {
+    if (response.statusCode != 200) {
+      throw StateError('RPC error: ${response.statusCode}');
     }
 
+    return jsonDecode(response.body);
+  }
+
+  @override
+  Future<_Request> preprocess(String method, String path, data) async {
     final headers = <String, String>{};
     if (globalSecret != null) {
       headers[secretHeaderKey] = globalSecret!;
     }
 
     headers['Content-Type'] = 'application/json';
+    final host = development ? 'http://localhost' : this.host;
     late Uri uri;
     if (port != null) {
       uri = Uri.parse('$host:$port$path');
@@ -121,81 +114,49 @@ class Transport {
       uri = Uri.parse('$host$path');
     }
 
-    final req =
-        await _http.post(uri, body: jsonEncode(request), headers: headers);
-    if (req.statusCode != 200) {
-      throw StateError('Rpc error: ${req.statusCode}');
-    }
-
-    final json = jsonDecode(req.body);
-    if (json is Map) {
-      return json.cast<String, dynamic>();
-    }
-
-    throw StateError('Rpc error: Wrong response value');
+    final request = _Request(uri: uri);
+    request.headers.addAll(headers);
+    return request;
   }
 }
 
-/// Application, for demonstration only
-class App {
-  late Object db;
-}
+/// Request, for demonstration only
+class _Request {
+  final Map<String, String> headers = {};
 
-// **************************************************************************
-// Our own server, handwritten
-// **************************************************************************
+  final Uri uri;
 
-/// Server implementation
-class Server extends ExampleApiServer {
-  Server(App app, HttpRequest _request) : super(ServerHandler(app, _request));
-}
-
-/// Server handler implementation
-class ServerHandler extends ExampleApi {
-  final App _app;
-
-  // Can be used to access session data
-  final HttpRequest _request;
-
-  ServerHandler(this._app, this._request);
-
-  @override
-  Future<AddResponse> add(AddRequest request) async {
-    print(_app.db);
-    return AddResponse(result: request.arg1! + request.arg2!);
-  }
-
-  @override
-  Future<NotResponse> not(NotRequest request) async {
-    return NotResponse(result: !request.arg!);
-  }
-
-  @override
-  Future<VoidResponse> void_(VoidRequest request) async {
-    final name = request.name ?? 'Unknown';
-    return VoidResponse(result: 'Hello you, $name!');
-  }
+  _Request({required this.uri});
 }
 
 // **************************************************************************
 // Our own client, handwritten
 // **************************************************************************
 
-// Client implementation
 class Client extends ExampleApiClient {
   Client() : super(ClientTransport());
 }
 
 /// Client transport implementation
-class ClientTransport extends ExampleApiTransport {
-  final Transport _transport;
-
+class ClientTransport extends Transport with ExampleApiTransport {
   ClientTransport()
-      : _transport =
-            Transport(host: ExampleApiConfig.host, port: ExampleApiConfig.port);
+      : super(host: ExampleApiConfig.host, port: ExampleApiConfig.clientPort);
+}
 
+// **************************************************************************
+// Our own server, handwritten
+// **************************************************************************
+
+/// ServerHandler
+class ServerHandler extends ExampleApiHandler {
+  ServerHandler() : super(ServerService());
+}
+
+/// ServerService
+class ServerService extends ExampleApi {
   @override
-  Future<Map<String, dynamic>> send(
-          String method, String path, Map<String, dynamic> request) =>
-      _transport.send(method, path, request);
+  @RpcMethod(path: '/add', authorize: true)
+  Future<int> add({required int x, required int y}) async {
+    return x + y;
+  }
 }

@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "build.dart",
+            "program": ".dart_tool/build/entrypoint/build.dart",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "build",
+            ]
+        },
+        {
+            "name": "test.dart",
+            "program": "test/test.dart",
+            "request": "launch",
+            "type": "dart",
+        }
+    ]
+}

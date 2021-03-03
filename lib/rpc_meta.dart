@@ -1,18 +1,33 @@
+class RpcKey {
+  final bool? ignoreIfNull;
+
+  final String? name;
+
+  const RpcKey({this.ignoreIfNull, this.name});
+}
+
 class RpcMethod {
   final bool authorize;
 
-  final String method;
+  final bool? ignoreIfNull;
+
+  final String httpMethod;
 
   final String path;
 
   const RpcMethod(
-      {this.authorize = false, this.method = 'POST', required this.path});
+      {this.authorize = false,
+      this.ignoreIfNull,
+      this.httpMethod = 'POST',
+      required this.path});
 }
 
 class RpcService {
+  final int? clientPort;
+
   final String host;
 
-  final int port;
+  final int? serverPort;
 
-  const RpcService({required this.host, required this.port});
+  const RpcService({this.clientPort, required this.host, this.serverPort});
 }
