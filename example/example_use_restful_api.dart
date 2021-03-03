@@ -5,35 +5,26 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:rpc_gen/rpc_http_transport.dart';
 import 'package:rpc_gen/rpc_meta.dart';
 
-part 'example_jsonplaceholder.g.dart';
+part 'example_use_restful_api.g.dart';
 
 Future<void> main(List<String> args) async {
   final client = _Client();
   final id = 1;
-  print('Comments with id $id:');
-  final commentsById = await client.comments(id: id);
-  for (final comment in commentsById) {
+  print('Comments with post id $id:');
+  final postComments = await client.postComments(id: id);
+  for (final comment in postComments) {
     print('${comment.id}: ${comment.email}');
-  }
-
-  if (commentsById.isNotEmpty) {
-    final comment = commentsById.first;
-    print('Comments with email ${comment.email}:');
-    final commentsByEmail = await client.comments(email: comment.email);
-    for (final comment in commentsByEmail) {
-      print('${comment.id}: ${comment.email}');
-    }
   }
 }
 
 @RpcService(host: 'https://jsonplaceholder.typicode.com')
 abstract class JsonPlaceholder {
-  @RpcMethod(path: '/comments', httpMethod: 'GET', ignoreIfNull: true)
-  Future<List<_Comment>> comments({String? email, int? id, int? postId});
+  @RpcMethod(path: '/posts/<id>/comments', httpMethod: 'GET')
+  Future<List<_Comment>> postComments({required int id});
 }
 
 class _Client extends JsonPlaceholderClient {
-  _Client() : super(_Transport(host: JsonPlaceholderConfig.host));
+  _Client() : super(_RestTransport(host: JsonPlaceholderConfig.host));
 }
 
 @JsonSerializable()
@@ -58,19 +49,15 @@ class _Request {
   _Request({required this.url});
 }
 
-class _Transport extends JsonPlaceholderTransport
+class _RestTransport extends JsonPlaceholderTransport
     with RpcHttpTransport<_Request, _http.Response> {
   final String host;
 
-  _Transport({required this.host});
+  _RestTransport({required this.host});
 
   @override
   Future<_http.Response> get(_Request request, data) {
-    final queryString =
-        Uri(queryParameters: (data as Map).map((k, v) => MapEntry('$k', '$v')))
-            .query;
-    final url = Uri.parse('${request.url}?$queryString');
-    return _http.get(url, headers: request.headers);
+    return _http.get(request.url, headers: request.headers);
   }
 
   @override
@@ -84,6 +71,16 @@ class _Transport extends JsonPlaceholderTransport
 
   @override
   Future<_Request> preprocess(String method, String path, data) async {
+    final args = data as Map<String, dynamic>;
+    for (final key in args.keys) {
+      if (path.contains('<$key>')) {
+        path = path.replaceAll('<$key>', '${args[key]}');
+      } else {
+        throw StateError(
+            'Unable to apply the arguments to path \'$path\': $args');
+      }
+    }
+
     final uri = Uri.parse(host + path);
     final request = _Request(url: uri);
     return request;

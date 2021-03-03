@@ -1,3 +1,7 @@
+## 0.1.4
+
+- Added an example of how to organize (limited) work with the RestFul API.
+
 ## 0.1.3
 
 - Added the ability to use `named method parameters`, which allows in most cases not to declare the data type specifically for the purpose of sending complex data from the client to the server
