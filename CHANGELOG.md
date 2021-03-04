@@ -1,3 +1,7 @@
+## 0.1.5
+
+- Small changes in examples
+
 ## 0.1.4
 
 - Added an example of how to organize (limited) work with the RestFul API.

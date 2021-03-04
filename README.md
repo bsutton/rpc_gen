@@ -72,12 +72,11 @@ abstract class JsonPlaceholder {
 Source code of example:
 
 ```dart
-import 'dart:convert';
-
-import 'package:http/http.dart' as _http;
 import 'package:json_annotation/json_annotation.dart';
-import 'package:rpc_gen/rpc_http_transport.dart';
+
 import 'package:rpc_gen/rpc_meta.dart';
+
+import 'custom_http_json_transport.dart';
 
 part 'example_jsonplaceholder.g.dart';
 
@@ -86,7 +85,7 @@ Future<void> main(List<String> args) async {
   final id = 1;
   print('Comments with id $id:');
   final commentsById = await client.comments(id: id);
-  for (final comment in await client.comments(id: 1)) {
+  for (final comment in commentsById) {
     print('${comment.id}: ${comment.email}');
   }
 
@@ -125,87 +124,14 @@ class _Comment {
   Map<String, dynamic> toJson() => _$_CommentToJson(this);
 }
 
-class _Request {
-  final Map<String, String> headers = {};
-  final Uri url;
-
-  _Request({required this.url});
-}
-
-class _Transport extends JsonPlaceholderTransport
-    with RpcHttpTransport<_Request, _http.Response> {
+class _Transport extends CustomHttpJsonTransport with JsonPlaceholderTransport {
+  @override
   final String host;
 
-  _Transport({required this.host});
-
   @override
-  Future<_http.Response> get(_Request request, data) {
-    final queryString =
-        Uri(queryParameters: (data as Map).map((k, v) => MapEntry('$k', '$v')))
-            .query;
-    final url = Uri.parse('${request.url}?$queryString');
-    return _http.get(url, headers: request.headers);
-  }
+  final int? port;
 
-  @override
-  Future postprocess(_Request request, _http.Response response) async {
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw 'Bad response: ${response.statusCode}';
-    }
-  }
-
-  @override
-  Future<_Request> preprocess(String method, String path, data) async {
-    final uri = Uri.parse(host + path);
-    final request = _Request(url: uri);
-    return request;
-  }
-}
-
-```
-
-The example looks like a bit complicated source code, but most of the code is the source code for models and transport for sending and receiving data.  
-If this code is taken out of the code of the example, then the example will look much simpler.  
-
-```dart
-import 'dart:convert';
-
-import 'package:http/http.dart' as _http;
-import 'package:json_annotation/json_annotation.dart';
-import 'package:rpc_gen/rpc_http_transport.dart';
-import 'package:rpc_gen/rpc_meta.dart';
-
-part 'example_jsonplaceholder.g.dart';
-
-Future<void> main(List<String> args) async {
-  final client = _Client();
-  final id = 1;
-  print('Comments with id $id:');
-  final commentsById = await client.comments(id: id);
-  for (final comment in await client.comments(id: 1)) {
-    print('${comment.id}: ${comment.email}');
-  }
-
-  if (commentsById.isNotEmpty) {
-    final comment = commentsById.first;
-    print('Comments with email ${comment.email}:');
-    final commentsByEmail = await client.comments(email: comment.email);
-    for (final comment in commentsByEmail) {
-      print('${comment.id}: ${comment.email}');
-    }
-  }
-}
-
-@RpcService(host: 'https://jsonplaceholder.typicode.com')
-abstract class JsonPlaceholder {
-  @RpcMethod(path: '/comments', httpMethod: 'GET', ignoreIfNull: true)
-  Future<List<_Comment>> comments({String? email, int? id, int? postId});
-}
-
-class _Client extends JsonPlaceholderClient {
-  _Client() : super(_Transport(host: JsonPlaceholderConfig.host));
+  _Transport({required this.host, this.port});
 }
 
 ```
@@ -354,106 +280,11 @@ A utility class is also generated. At the moment it only allows getting a list o
 So it's time to take a look at the generated classes (there is not so much source code).  
 
 ```dart
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
-part of 'example_rpc.dart';
-
-// **************************************************************************
-// RpcGenerator
-// **************************************************************************
-
-class ExampleApiClient implements ExampleApi {
-  ExampleApiClient(this._transport);
-
-  final ExampleApiTransport _transport;
-
-  @override
-  Future<int> add({required int x, required int y}) async {
-    final $0 = <String, dynamic>{};
-    $0['x'] = x;
-    $0['y'] = y;
-    final $1 = await _transport.send('POST', '/example_api/v1/add', $0);
-    return $1 as int;
-  }
-}
-
-class ExampleApiConfig {
-  static const int? clientPort = 8002;
-
-  static const String host = 'http://exmaple.com';
-
-  static const int? serverPort = 8002;
-}
-
-class ExampleApiHandler {
-  ExampleApiHandler(this._handler);
-
-  final ExampleApi _handler;
-
-  Future handle(String name, data) async {
-    switch (name) {
-      case 'add':
-        final $0 = data as Map;
-        final $1 = $0['x'] as int;
-        final $2 = $0['y'] as int;
-        final $3 = await _handler.add(x: $1, y: $2);
-        return $3;
-      default:
-        throw StateError('Unknown remote procedure: \'$name\'');
-    }
-  }
-}
-
-class ExampleApiMethod {
-  const ExampleApiMethod(
-      {required this.authorize,
-      required this.method,
-      required this.name,
-      required this.path});
-
-  final bool authorize;
-
-  final String method;
-
-  final String name;
-
-  final String path;
-}
-
-abstract class ExampleApiTransport {
-  Future send(String method, String path, request);
-}
-
-abstract class ExampleApiUtils {
-  static List<ExampleApiMethod> getMethods() {
-    return const [
-      ExampleApiMethod(
-          authorize: true,
-          method: 'POST',
-          name: 'add',
-          path: '/example_api/v1/add')
-    ];
-  }
-}
-
-```
-
-Not much code, but you would have to write all this code (or similar) by hand whenever you make a change. But now there is no need to do this, the generator will do everything for you.  
-
-Finally, an example of how these classes can be used with maximum efficiency.  
-
-The source code of the example will contain a little more code than we would like (to organize the interaction), but this code is the code of the program, without which nothing will work at all (function "main", web server, calls from client, etc.). In real life, this code will be different, but it is included in the example as an illustrative part.  
-
-
-```dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as _http;
-import 'package:rpc_gen/rpc_http_transport.dart';
-import 'package:rpc_gen/rpc_meta.dart';
-
+import 'custom_http_json_transport.dart';
 import 'example_rpc.dart';
 
 void main() async {
@@ -482,7 +313,7 @@ Future<void> _runCleint() async {
   final x = 2;
   final y = 3;
   final res1 = await client.add(x: x, y: y);
-  print('add($x,$y) = ${res1}');
+  print('add($x,$y) = $res1');
 }
 
 /// Web server, for demonstration only
@@ -524,57 +355,25 @@ Future<void> _serve() async {
 }
 
 /// Transport, for demonstration only
-abstract class Transport extends RpcHttpTransport<_Request, _http.Response> {
+class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
+  @override
   final String host;
 
+  @override
   final int? port;
 
-  Transport({required this.host, this.port});
+  Transport({required String host, this.port})
+      : host = development ? 'http://localhost' : host;
 
   @override
-  Future<_http.Response> post(_Request request, data) {
-    return _http.post(request.uri,
-        body: jsonEncode(data), headers: request.headers);
-  }
-
-  @override
-  Future postprocess(_Request request, _http.Response response) async {
-    if (response.statusCode != 200) {
-      throw StateError('RPC error: ${response.statusCode}');
-    }
-
-    return jsonDecode(response.body);
-  }
-
-  @override
-  Future<_Request> preprocess(String method, String path, data) async {
-    final headers = <String, String>{};
+  Future<CustomRequest> preprocess(String method, String path, data) async {
+    final request = await super.preprocess(method, path, data);
     if (globalSecret != null) {
-      headers[secretHeaderKey] = globalSecret!;
+      request.headers[secretHeaderKey] = secretToken;
     }
 
-    headers['Content-Type'] = 'application/json';
-    final host = development ? 'http://localhost' : this.host;
-    late Uri uri;
-    if (port != null) {
-      uri = Uri.parse('$host:$port$path');
-    } else {
-      uri = Uri.parse('$host$path');
-    }
-
-    final request = _Request(uri: uri);
-    request.headers.addAll(headers);
     return request;
   }
-}
-
-/// Request, for demonstration only
-class _Request {
-  final Map<String, String> headers = {};
-
-  final Uri uri;
-
-  _Request({required this.uri});
 }
 
 // **************************************************************************
@@ -603,7 +402,6 @@ class ServerHandler extends ExampleApiHandler {
 /// ServerService
 class ServerService extends ExampleApi {
   @override
-  @RpcMethod(path: '/add', authorize: true)
   Future<int> add({required int x, required int y}) async {
     return x + y;
   }
