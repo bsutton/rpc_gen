@@ -2,10 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as _http;
-import 'package:rpc_gen/rpc_http_transport.dart';
-import 'package:rpc_gen/rpc_meta.dart';
-
+import 'custom_http_json_transport.dart';
 import 'example_rpc.dart';
 
 void main() async {
@@ -34,7 +31,7 @@ Future<void> _runCleint() async {
   final x = 2;
   final y = 3;
   final res1 = await client.add(x: x, y: y);
-  print('add($x,$y) = ${res1}');
+  print('add($x,$y) = $res1');
 }
 
 /// Web server, for demonstration only
@@ -76,57 +73,25 @@ Future<void> _serve() async {
 }
 
 /// Transport, for demonstration only
-abstract class Transport extends RpcHttpTransport<_Request, _http.Response> {
+class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
+  @override
   final String host;
 
+  @override
   final int? port;
 
-  Transport({required this.host, this.port});
+  Transport({required String host, this.port})
+      : host = development ? 'http://localhost' : host;
 
   @override
-  Future<_http.Response> post(_Request request, data) {
-    return _http.post(request.uri,
-        body: jsonEncode(data), headers: request.headers);
-  }
-
-  @override
-  Future postprocess(_Request request, _http.Response response) async {
-    if (response.statusCode != 200) {
-      throw StateError('RPC error: ${response.statusCode}');
-    }
-
-    return jsonDecode(response.body);
-  }
-
-  @override
-  Future<_Request> preprocess(String method, String path, data) async {
-    final headers = <String, String>{};
+  Future<CustomRequest> preprocess(String method, String path, data) async {
+    final request = await super.preprocess(method, path, data);
     if (globalSecret != null) {
-      headers[secretHeaderKey] = globalSecret!;
+      request.headers[secretHeaderKey] = secretToken;
     }
 
-    headers['Content-Type'] = 'application/json';
-    final host = development ? 'http://localhost' : this.host;
-    late Uri uri;
-    if (port != null) {
-      uri = Uri.parse('$host:$port$path');
-    } else {
-      uri = Uri.parse('$host$path');
-    }
-
-    final request = _Request(uri: uri);
-    request.headers.addAll(headers);
     return request;
   }
-}
-
-/// Request, for demonstration only
-class _Request {
-  final Map<String, String> headers = {};
-
-  final Uri uri;
-
-  _Request({required this.uri});
 }
 
 // **************************************************************************
@@ -155,7 +120,6 @@ class ServerHandler extends ExampleApiHandler {
 /// ServerService
 class ServerService extends ExampleApi {
   @override
-  @RpcMethod(path: '/add', authorize: true)
   Future<int> add({required int x, required int y}) async {
     return x + y;
   }

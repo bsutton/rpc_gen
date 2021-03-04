@@ -3,7 +3,7 @@ abstract class RpcHttpTransport<TRequest, TResponse> {
     unsupportedMethod('DELETE');
   }
 
-  Future<TResponse> get(TRequest request, datan) async {
+  Future<TResponse> get(TRequest request, data) async {
     unsupportedMethod('GET');
   }
 

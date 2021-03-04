@@ -1,9 +1,8 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as _http;
 import 'package:json_annotation/json_annotation.dart';
-import 'package:rpc_gen/rpc_http_transport.dart';
+
 import 'package:rpc_gen/rpc_meta.dart';
+
+import 'custom_http_json_transport.dart';
 
 part 'example_jsonplaceholder.g.dart';
 
@@ -51,41 +50,12 @@ class _Comment {
   Map<String, dynamic> toJson() => _$_CommentToJson(this);
 }
 
-class _Request {
-  final Map<String, String> headers = {};
-  final Uri url;
-
-  _Request({required this.url});
-}
-
-class _Transport extends JsonPlaceholderTransport
-    with RpcHttpTransport<_Request, _http.Response> {
+class _Transport extends CustomHttpJsonTransport with JsonPlaceholderTransport {
+  @override
   final String host;
 
-  _Transport({required this.host});
-
   @override
-  Future<_http.Response> get(_Request request, data) {
-    final queryString =
-        Uri(queryParameters: (data as Map).map((k, v) => MapEntry('$k', '$v')))
-            .query;
-    final url = Uri.parse('${request.url}?$queryString');
-    return _http.get(url, headers: request.headers);
-  }
+  final int? port;
 
-  @override
-  Future postprocess(_Request request, _http.Response response) async {
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw 'Bad response: ${response.statusCode}';
-    }
-  }
-
-  @override
-  Future<_Request> preprocess(String method, String path, data) async {
-    final uri = Uri.parse(host + path);
-    final request = _Request(url: uri);
-    return request;
-  }
+  _Transport({required this.host, this.port});
 }
