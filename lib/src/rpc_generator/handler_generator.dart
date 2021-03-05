@@ -62,47 +62,43 @@ class _HandlerGenerator {
       }));
 
       b.requiredParameters.add(Parameter((b) {
-        b.name = 'data';
+        b.type = refer('Map<String, dynamic>');
+        b.name = 'positionalArguments';
+      }));
+
+      b.requiredParameters.add(Parameter((b) {
+        b.type = refer('Map<String, dynamic>');
+        b.name = 'namedArguments';
       }));
 
       final cases = <List<Expression>, List<Code>>{};
       for (final method in methods) {
         final variableAllocator = VariableAllocator();
-        final data = 'data';
         final code = <Code>[];
         final parameters = method.parameters;
-        Expression invoke;
         final positionalArguments = <Expression>[];
         final namedArguments = <String, Expression>{};
-        final allNamed = parameters.where((e) => e.parameter.isNamed).length ==
-            parameters.length;
-        if (allNamed && parameters.isNotEmpty) {
-          final map = variableAllocator.alloc();
-          code <<
-              refer(data)
-                  .asWithoutParenthesis(refer('Map'))
-                  .assignFinal(map)
-                  .statement;
-          for (final parameterInfo in parameters) {
-            final parameter = parameterInfo.parameter;
-            final parameternName = parameter.name;
-            final variable = variableAllocator.alloc();
-            final decoding = _decode(
-                refer(map).index(literalString(parameterInfo.keyName)),
-                parameter.type);
-            code << decoding.assignFinal(variable).statement;
-            namedArguments[parameternName] = refer(variable);
-          }
-        } else if (parameters.isNotEmpty) {
-          final parameterInfo = parameters.first;
+        for (final parameterInfo in parameters) {
           final parameter = parameterInfo.parameter;
           final variable = variableAllocator.alloc();
-          final decoding = _decode(refer(data), parameter.type);
-          code << decoding.assignFinal(variable).statement;
-          positionalArguments.add(refer(variable));
+          if (parameter.isPositional) {
+            final decoding = _decode(
+                refer('positionalArguments')
+                    .index(literalString(parameterInfo.keyName)),
+                parameter.type);
+            code << decoding.assignFinal(variable).statement;
+            positionalArguments.add(refer(variable));
+          } else {
+            final decoding = _decode(
+                refer('namedArguments')
+                    .index(literalString(parameterInfo.keyName)),
+                parameter.type);
+            code << decoding.assignFinal(variable).statement;
+            namedArguments[parameter.name] = refer(variable);
+          }
         }
 
-        invoke = refer('_handler')
+        final invoke = refer('_handler')
             .property(method.name)
             .call(positionalArguments, namedArguments)
             .awaited;

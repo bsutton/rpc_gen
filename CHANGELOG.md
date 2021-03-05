@@ -1,3 +1,7 @@
+## 0.1.6
+
+- Breaking changes in favor of improving functionality
+
 ## 0.1.5
 
 - Small changes in examples

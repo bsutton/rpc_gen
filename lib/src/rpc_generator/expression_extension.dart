@@ -15,6 +15,18 @@ Code elseIf_(Expression expression, List<Code> statements) =>
 Code if_(Expression expression, List<Code> statements) =>
     _statement('if', expression, statements);
 
+Code forIn(Reference identifier, Expression expression, List<Code> statements,
+        {bool isFinal = true}) =>
+    _statement(
+        'for',
+        CodeExpression(Block.of([
+          isFinal ? const Code('final ') : const Code('var '),
+          identifier.code,
+          const Code(' in '),
+          expression.code
+        ])),
+        statements);
+
 Code switch_(Expression expression, Map<List<Expression>, List<Code>> cases,
     [List<Code> default_]) {
   final code = <Code>[];

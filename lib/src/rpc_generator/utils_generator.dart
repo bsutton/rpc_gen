@@ -28,7 +28,9 @@ class _UtilsGenerator {
         'authorize': literalBool(method.authorize),
         'method': literalString(method.httpMethod),
         'name': literalString(method.name),
-        'path': literalString(method.path)
+        'namedParameters': literalList([]),
+        'path': literalString(method.path),
+        'positionalParameters': literalList([]),
       });
 
       values.add(value);

@@ -12,8 +12,8 @@ class _MethodGenerator {
 
       b.fields.add(Field((b) {
         b.modifier = FieldModifier.final$;
-        b..type = refer('bool');
-        b..name = 'authorize';
+        b.type = refer('bool');
+        b.name = 'authorize';
       }));
 
       b.fields.add(Field((b) {
@@ -26,6 +26,18 @@ class _MethodGenerator {
         b.modifier = FieldModifier.final$;
         b.type = refer('String');
         b.name = 'name';
+      }));
+
+      b.fields.add(Field((b) {
+        b.modifier = FieldModifier.final$;
+        b.type = refer('List<String>');
+        b.name = 'namedParameters';
+      }));
+
+      b.fields.add(Field((b) {
+        b.modifier = FieldModifier.final$;
+        b.type = refer('List<String>');
+        b.name = 'positionalParameters';
       }));
 
       b.fields.add(Field((b) {
@@ -55,6 +67,20 @@ class _MethodGenerator {
           b.required = true;
           b.toThis = true;
           b.name = 'name';
+        }));
+
+        b.optionalParameters.add(Parameter((b) {
+          b.named = true;
+          b.required = true;
+          b.toThis = true;
+          b.name = 'namedParameters';
+        }));
+
+        b.optionalParameters.add(Parameter((b) {
+          b.named = true;
+          b.required = true;
+          b.toThis = true;
+          b.name = 'positionalParameters';
         }));
 
         b.optionalParameters.add(Parameter((b) {

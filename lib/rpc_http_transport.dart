@@ -1,77 +1,89 @@
 abstract class RpcHttpTransport<TRequest, TResponse> {
-  Future<TResponse> delete(TRequest request, data) async {
-    unsupportedMethod('DELETE');
+  Future<TResponse> delete(TRequest request) async {
+    unimplementedHttpMethod('DELETE');
   }
 
-  Future<TResponse> get(TRequest request, data) async {
-    unsupportedMethod('GET');
+  Future<TResponse> get(TRequest request) async {
+    unimplementedHttpMethod('GET');
   }
 
-  Future<TResponse> head(TRequest request, data) async {
-    unsupportedMethod('HEAD');
+  Future<TResponse> head(TRequest request) async {
+    unimplementedHttpMethod('HEAD');
   }
 
-  Future<TResponse> options(TRequest request, data) async {
-    unsupportedMethod('OPTIONS');
+  Future<TResponse> options(TRequest request) async {
+    unimplementedHttpMethod('OPTIONS');
   }
 
-  Future<TResponse> patch(TRequest request, data) async {
-    unsupportedMethod('PATCH');
+  Future<TResponse> patch(TRequest request) async {
+    unimplementedHttpMethod('PATCH');
   }
 
-  Future<TResponse> post(TRequest request, data) async {
-    unsupportedMethod('POST');
+  Future<TResponse> post(TRequest request) async {
+    unimplementedHttpMethod('POST');
   }
 
   Future postprocess(TRequest request, TResponse response);
 
-  Future<TRequest> preprocess(String method, String path, data);
+  Future<TRequest> preprocess(
+      String name,
+      String httpMethod,
+      String path,
+      Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments);
 
-  Future<TResponse> put(TRequest request, data) async {
-    unsupportedMethod('PUT');
+  Future<TResponse> put(TRequest request) async {
+    unimplementedHttpMethod('PUT');
   }
 
-  Future send(String method, String path, data) async {
-    final request = await preprocess(method, path, data);
+  Future send(
+      String name,
+      String httpMethod,
+      String path,
+      Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments) async {
+    final request = await preprocess(
+        name, httpMethod, path, positionalArguments, namedArguments);
     late TResponse response;
-    switch (method) {
+    switch (httpMethod) {
       case 'GET':
-        response = await get(request, data);
+        response = await get(request);
         break;
       case 'HEAD':
-        response = await head(request, data);
+        response = await head(request);
         break;
       case 'POST':
-        response = await post(request, data);
+        response = await post(request);
         break;
       case 'PUT':
-        response = await put(request, data);
+        response = await put(request);
         break;
       case 'DELETE':
-        response = await delete(request, data);
+        response = await delete(request);
         break;
       case 'OPTIONS':
-        response = await options(request, data);
+        response = await options(request);
         break;
       case 'TRACE':
-        response = await trace(request, data);
+        response = await trace(request);
         break;
       case 'PATCH':
-        response = await patch(request, data);
+        response = await patch(request);
         break;
       default:
-        unsupportedMethod(method);
+        throw UnsupportedError(
+            'Sending data using the http method \'$httpMethod\' is not supported');
     }
 
     return postprocess(request, response);
   }
 
-  Future<TResponse> trace(TRequest request, data) async {
-    unsupportedMethod('TRACE');
+  Future<TResponse> trace(TRequest request) async {
+    unimplementedHttpMethod('TRACE');
   }
 
-  Never unsupportedMethod(String method) {
-    throw UnsupportedError(
-        'Sending data using the \'$method\' method is not supported');
+  Never unimplementedHttpMethod(String httpMethod) {
+    throw UnimplementedError(
+        'Sending data using the http method \'$httpMethod\' is not supported');
   }
 }

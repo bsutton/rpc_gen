@@ -367,14 +367,14 @@ class ClientTransport extends TesterTransport
   final TesterHandler _handler = TesterHandler(TesterServer());
 
   @override
-  Future post(_Request request, data) async {
+  Future post(_Request request) async {
     final methods =
         TesterUtils.getMethods().where((e) => e.path == request.path);
     if (methods.isNotEmpty) {
       final method = methods.first;
-      final encoded = jsonEncode(data);
-      final decoded = jsonDecode(encoded);
-      return await _handler.handle(method.name, decoded);
+      final body = jsonDecode(request.body as String) as Map;
+      return await _handler.handle(method.name,
+          body['p'] as Map<String, dynamic>, body['n'] as Map<String, dynamic>);
     } else {
       throw StateError('Path not found: ${request.path}');
     }
@@ -382,14 +382,18 @@ class ClientTransport extends TesterTransport
 
   @override
   Future postprocess(request, response) async {
-    final encoded = jsonEncode(response);
-    final decoded = jsonDecode(encoded);
-    return decoded;
+    return response;
   }
 
   @override
-  Future<_Request> preprocess(String method, String path, data) async {
-    return _Request(path: path);
+  Future<_Request> preprocess(
+      String name,
+      String method,
+      String path,
+      Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments) async {
+    final body = {'p': positionalArguments, 'n': namedArguments};
+    return _Request(path: path, body: jsonEncode(body));
   }
 }
 
@@ -705,5 +709,7 @@ class TesterServer implements Tester {
 class _Request {
   final String path;
 
-  _Request({required this.path});
+  final dynamic body;
+
+  _Request({this.body, required this.path});
 }

@@ -1,5 +1,5 @@
 name: rpc_gen
-version: 0.1.5
+version: 0.1.6
 description: The `rpc_gen` is a builder and generator of RPC (Remote Procedure Call) stub files.
 homepage: https://github.com/mezoni/rpc_gen
 environment:

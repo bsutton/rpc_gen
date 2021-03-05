@@ -58,7 +58,26 @@ Future<void> _serve() async {
 
         final source = await utf8.decodeStream(request);
         final data = jsonDecode(source);
-        final result = await handler.handle(method.name, data);
+        Map<String, dynamic>? positionalArguments;
+        Map<String, dynamic>? namedArguments;
+        if (data is Map) {
+          final p = data['p'];
+          if (p is Map<String, dynamic>) {
+            positionalArguments = p;
+          }
+
+          final n = data['n'];
+          if (n is Map<String, dynamic>) {
+            namedArguments = n;
+          }
+        }
+
+        if (positionalArguments == null || namedArguments == null) {
+          throw StateError('Invalid data format');
+        }
+
+        final result = await handler.handle(
+            method.name, positionalArguments, namedArguments);
         response.headers.add('Content-Type', 'application/json');
         response.write(jsonEncode(result));
       } else {
@@ -84,8 +103,17 @@ class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
       : host = development ? 'http://localhost' : host;
 
   @override
-  Future<CustomRequest> preprocess(String method, String path, data) async {
-    final request = await super.preprocess(method, path, data);
+  Future<SimpleRequest> preprocess(
+      String name,
+      String httpMethod,
+      String path,
+      Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments) async {
+    final body = {'p': positionalArguments, 'n': namedArguments};
+    final url =
+        port == null ? Uri.parse('$host$path') : Uri.parse('$host:$port$path');
+    final request = SimpleRequest(url: url, body: body);
+    request.headers['Content-Type'] = 'application/json';
     if (globalSecret != null) {
       request.headers[secretHeaderKey] = secretToken;
     }

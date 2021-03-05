@@ -68,52 +68,45 @@ class _ClientGenerator {
         parametersBuilder.build();
 
         final variableAllocator = VariableAllocator();
-        final data = variableAllocator.alloc();
         final response = variableAllocator.alloc();
         final parameters = method.parameters;
+        final positional = variableAllocator.alloc();
+        final named = variableAllocator.alloc();
         final code = <Code>[];
-        final allNamed = parameters.where((e) => e.parameter.isNamed).length ==
-            parameters.length;
-        if (allNamed && parameters.isNotEmpty) {
-          code <<
-              literalMap({}, refer('String'), refer('dynamic'))
-                  .assignFinal(data)
-                  .statement;
-          for (final parameterInfo in parameters) {
-            final parameter = parameterInfo.parameter;
-            final parameterType = parameter.type;
-            final encoding = _encode(refer(parameter.name), parameterType);
-            final assigning = refer(data)
-                .index(literalString(parameterInfo.keyName))
-                .assign(encoding)
+        code <<
+            literalMap({}, refer('String'), refer('dynamic'))
+                .assignFinal(positional)
                 .statement;
-            if (typeHelper.isNullableType(parameterType) &&
-                parameterInfo.ignoreIfNull) {
-              code <<
-                  if_(refer(parameter.name).notEqualTo(literalNull),
-                      [assigning]);
-            } else {
-              code << assigning;
-            }
-          }
-        } else if (parameters.isNotEmpty) {
-          final parameterInfo = parameters.first;
+        code <<
+            literalMap({}, refer('String'), refer('dynamic'))
+                .assignFinal(named)
+                .statement;
+        for (final parameterInfo in parameters) {
           final parameter = parameterInfo.parameter;
-          final encoding = _encode(refer(parameter.name), parameter.type);
-          code << encoding.assignFinal(data).statement;
-        } else {
-          code <<
-              literalMap({}, refer('String'), refer('dynamic'))
-                  .assignFinal(data)
-                  .statement;
+          final parameterType = parameter.type;
+          final encoding = _encode(refer(parameter.name), parameterType);
+          final map = parameter.isNamed ? named : positional;
+          final assigning = refer(map)
+              .index(literalString(parameterInfo.keyName))
+              .assign(encoding)
+              .statement;
+          if (typeHelper.isNullableType(parameterType) &&
+              parameterInfo.ignoreIfNull) {
+            code <<
+                if_(refer(parameter.name).notEqualTo(literalNull), [assigning]);
+          } else {
+            code << assigning;
+          }
         }
 
         final returnTypeArguments = typeHelper.getTypeArguments(returnType);
         final returnTypeArgument = returnTypeArguments.first;
         final send = refer('_transport').property('send').call([
+          literalString(method.name),
           literalString(method.httpMethod),
           literalString(method.path),
-          refer(data),
+          refer(positional),
+          refer(named),
         ]).awaited;
 
         if (returnTypeArgument.isVoid) {

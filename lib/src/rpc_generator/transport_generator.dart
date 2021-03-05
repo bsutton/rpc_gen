@@ -11,13 +11,31 @@ class _TransportGenerator {
     final method = Method((b) {
       b.returns = refer('Future');
       b.name = 'send';
-      b.requiredParameters.add(Parameter((b) => b
-        ..type = refer('String')
-        ..name = 'method'));
-      b.requiredParameters.add(Parameter((b) => b
-        ..type = refer('String')
-        ..name = 'path'));
-      b.requiredParameters.add(Parameter((b) => b..name = 'request'));
+
+      b.requiredParameters.add(Parameter((b) {
+        b.type = refer('String');
+        b.name = 'name';
+      }));
+
+      b.requiredParameters.add(Parameter((b) {
+        b.type = refer('String');
+        b.name = 'httpMethod';
+      }));
+
+      b.requiredParameters.add(Parameter((b) {
+        b.type = refer('String');
+        b.name = 'path';
+      }));
+
+      b.requiredParameters.add(Parameter((b) {
+        b.type = refer('Map<String, dynamic>');
+        b.name = 'positionalArguments';
+      }));
+
+      b.requiredParameters.add(Parameter((b) {
+        b.type = refer('Map<String, dynamic>');
+        b.name = 'namedArguments';
+      }));
     });
 
     methods.add(method);

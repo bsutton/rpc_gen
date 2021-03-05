@@ -41,20 +41,6 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
   void visitMethodElement(MethodElement element) {
     final methodName = element.name;
     final fullMethodName = '$name.$methodName';
-    final parameters = element.parameters;
-    final namedParameters = parameters.where((e) => e.isNamed);
-    if (namedParameters.isNotEmpty) {
-      if (namedParameters.length != parameters.length) {
-        _error(
-            'Method \'$fullMethodName\' must not combinate of positional and named parameters');
-      }
-    } else {
-      if (parameters.length > 1) {
-        _error(
-            'Method \'$fullMethodName\' must not declare more than one positional parameter');
-      }
-    }
-
     RpcMethod rpcMethod;
     for (final annotation in element.metadata) {
       final constant = annotation.computeConstantValue();
@@ -99,11 +85,17 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
 
     final parameterInfos = <_ParameterInfo>[];
     final keyNames = <String>{};
+    final parameters = element.parameters;
     for (final parameter in parameters) {
       final parameterType = parameter.type;
       if (parameter.name == null) {
         _error(
-            'Method \'$fullMethodName\' nust not be declared with unnamed parameters');
+            'Method \'$fullMethodName\' must not be declared with unnamed parameters');
+      }
+
+      if (parameter.defaultValueCode != null) {
+        _error(
+            'Method \'$fullMethodName\' must not be declared with parameters with default values');
       }
 
       final parameterName = parameter.name;
@@ -149,8 +141,9 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
 
       ignoreIfNull ??= methodIgnoreIfNull;
 
-      parameterInfos.add(_ParameterInfo(
-          ignoreIfNull: ignoreIfNull, keyName: keyName, parameter: parameter));
+      final parameterInfo = _ParameterInfo(
+          ignoreIfNull: ignoreIfNull, keyName: keyName, parameter: parameter);
+      parameterInfos.add(parameterInfo);
     }
 
     if (element.isPrivate) {
@@ -182,8 +175,8 @@ class _ClassVisitor extends SimpleElementVisitor<void> {
         httpMethod: httpMethod,
         ignoreIfNull: methodIgnoreIfNull,
         name: methodName,
-        path: path,
         parameters: parameterInfos,
+        path: path,
         returnType: returnType);
     methods.add(method);
   }
