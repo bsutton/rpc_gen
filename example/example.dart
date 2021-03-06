@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'custom_http_json_transport.dart';
-import 'example_rpc.dart';
+import 'package:http/src/response.dart';
+import 'package:rpc_gen/rpc_meta.dart';
+
+import '_http_transport.dart';
+
+part 'example.g.dart';
 
 void main() async {
   // Schedule a delayed client launch
@@ -16,11 +20,11 @@ void main() async {
   await _serve();
 }
 
-bool development = true;
-
 const secretHeaderKey = 'SECRET';
 
 const secretToken = '123';
+
+bool development = true;
 
 String? globalSecret;
 
@@ -91,8 +95,33 @@ Future<void> _serve() async {
   }
 }
 
-/// Transport, for demonstration only
-class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
+class Client extends ExampleApiClient {
+  Client() : super(ClientTransport());
+}
+
+class ClientTransport extends Transport with ExampleApiTransport {
+  ClientTransport()
+      : super(host: ExampleApiConfig.host, port: ExampleApiConfig.clientPort);
+}
+
+@RpcService(host: 'http://exmaple.com', serverPort: 8002)
+abstract class ExampleApi {
+  @RpcMethod(path: '/api/v1/add', authorize: true)
+  Future<int> add({required int x, required int y});
+}
+
+class ServerHandler extends ExampleApiHandler {
+  ServerHandler() : super(ServerService());
+}
+
+class ServerService extends ExampleApi {
+  @override
+  Future<int> add({required int x, required int y}) async {
+    return x + y;
+  }
+}
+
+class Transport extends HttpTransport with ExampleApiTransport {
   @override
   final String host;
 
@@ -103,7 +132,18 @@ class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
       : host = development ? 'http://localhost' : host;
 
   @override
-  Future<SimpleRequest> preprocess(
+  Future postprocess(RpcRequest request, Response response) async {
+    switch (response.statusCode) {
+      case 200:
+        return jsonDecode(response.body);
+      default:
+        throw StateError(
+            'Bad response: ${response.statusCode}\n${response.body}');
+    }
+  }
+
+  @override
+  Future<RpcRequest> preprocess(
       String name,
       String httpMethod,
       String path,
@@ -112,43 +152,12 @@ class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
     final body = {'p': positionalArguments, 'n': namedArguments};
     final url =
         port == null ? Uri.parse('$host$path') : Uri.parse('$host:$port$path');
-    final request = SimpleRequest(url: url, body: body);
+    final request = RpcRequest(url: url, body: body);
     request.headers['Content-Type'] = 'application/json';
     if (globalSecret != null) {
       request.headers[secretHeaderKey] = secretToken;
     }
 
     return request;
-  }
-}
-
-// **************************************************************************
-// Our own client, handwritten
-// **************************************************************************
-
-class Client extends ExampleApiClient {
-  Client() : super(ClientTransport());
-}
-
-/// Client transport implementation
-class ClientTransport extends Transport with ExampleApiTransport {
-  ClientTransport()
-      : super(host: ExampleApiConfig.host, port: ExampleApiConfig.clientPort);
-}
-
-// **************************************************************************
-// Our own server, handwritten
-// **************************************************************************
-
-/// ServerHandler
-class ServerHandler extends ExampleApiHandler {
-  ServerHandler() : super(ServerService());
-}
-
-/// ServerService
-class ServerService extends ExampleApi {
-  @override
-  Future<int> add({required int x, required int y}) async {
-    return x + y;
   }
 }

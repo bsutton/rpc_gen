@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'example_rpc.dart';
+part of 'example.dart';
 
 // **************************************************************************
 // RpcGenerator
@@ -17,8 +17,7 @@ class ExampleApiClient implements ExampleApi {
     final $2 = <String, dynamic>{};
     $2['x'] = x;
     $2['y'] = y;
-    final $0 =
-        await _transport.send('add', 'POST', '/example_api/v1/add', $1, $2);
+    final $0 = await _transport.send('add', 'POST', '/api/v1/add', $1, $2);
     return $0 as int;
   }
 }
@@ -89,7 +88,7 @@ abstract class ExampleApiUtils {
           method: 'POST',
           name: 'add',
           namedParameters: [],
-          path: '/example_api/v1/add',
+          path: '/api/v1/add',
           positionalParameters: [])
     ];
   }

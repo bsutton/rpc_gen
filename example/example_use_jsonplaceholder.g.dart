@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'example_jsonplaceholder.dart';
+part of 'example_use_jsonplaceholder.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator

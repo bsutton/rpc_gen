@@ -4,7 +4,7 @@ The `rpc_gen` is a builder and generator of RPC (Remote Procedure Call) stub fil
 
 ATTENTION: Under development
 
-Version 0.1.6
+Version 0.1.7
 
 Why need another RPC?
 
@@ -89,6 +89,8 @@ abstract class JsonPlaceholder {
 
 Source code of example:
 
+[example_use_jsonplaceholder.dart](https://github.com/mezoni/rpc_gen/blob/main/example/example_use_jsonplaceholder.dart)
+
 ```dart
 import 'dart:convert';
 
@@ -96,9 +98,9 @@ import 'package:http/http.dart' as _http;
 import 'package:json_annotation/json_annotation.dart';
 import 'package:rpc_gen/rpc_meta.dart';
 
-import 'custom_http_json_transport.dart';
+import '_rest_transport.dart';
 
-part 'example_jsonplaceholder.g.dart';
+part 'example_use_jsonplaceholder.g.dart';
 
 Future<void> main(List<String> args) async {
   final client = Client();
@@ -200,9 +202,7 @@ class Post {
   Map<String, dynamic> toJson() => _$PostToJson(this);
 }
 
-/// This class is an example of a transport
-/// A similar transport class can be reused
-class Transport extends CustomHttpJsonTransport with JsonPlaceholderTransport {
+class Transport extends RestTransport with JsonPlaceholderTransport {
   @override
   final String host;
 
@@ -212,116 +212,13 @@ class Transport extends CustomHttpJsonTransport with JsonPlaceholderTransport {
   Transport({required this.host, this.port});
 
   @override
-  Future postprocess(SimpleRequest request, _http.Response response) async {
+  Future postprocess(RpcRequest request, _http.Response response) async {
     switch (response.statusCode) {
       case 200:
       case 201:
         return jsonDecode(response.body);
       default:
         throw 'Bad response: ${response.statusCode}\n${response.body}';
-    }
-  }
-
-  @override
-  Future<SimpleRequest> preprocess(
-      String name,
-      String httpMethod,
-      String path,
-      Map<String, dynamic> positionalArguments,
-      Map<String, dynamic> namedArguments) async {
-    final methodName = '$httpMethod.$name';
-    var queryString = '';
-    var body;
-    final hasPathArguments = path.contains('<');
-    switch (httpMethod) {
-      case 'GET':
-      case 'HEAD':
-        if (hasPathArguments) {
-          path =
-              _buildPath(methodName, path, positionalArguments, 'positional');
-        }
-
-        queryString = _buildQueryString(methodName, namedArguments);
-        break;
-      default:
-        if (hasPathArguments) {
-          path = _buildPath(methodName, path, namedArguments, 'named');
-        }
-
-        if (positionalArguments.length > 1) {
-          StateError(
-              'The number of positional arguments must not exceed one argument when calling method \'$name\'');
-        }
-
-        if (positionalArguments.length == 1) {
-          body = positionalArguments.values.first;
-        }
-    }
-
-    final url = port == null
-        ? Uri.parse('$host$path$queryString')
-        : Uri.parse('$host:$port$path$queryString');
-    final request = SimpleRequest(url: url, body: body);
-    request.headers['Content-type'] = 'application/json; charset=UTF-8';
-    return request;
-  }
-
-  String _buildPath(String methodName, String path,
-      Map<String, dynamic> arguments, String kind) {
-    final parts = path.split('/');
-    final keys = <String>[];
-    final processed = <String>{};
-    for (var i = 0; i < parts.length; i++) {
-      final part = parts[i];
-      if (part.startsWith('<') && part.endsWith('>')) {
-        final key = part.substring(1, part.length - 1);
-        if (!arguments.containsKey(key)) {
-          throw StateError(
-              'Path argument \'$key\' was not be found in $kind arguments when calling method \'$methodName\'');
-        }
-
-        final argument = arguments[key];
-        final type = argument.runtimeType;
-        _checkArgumentType(type,
-            'Invalid type \'$type\' of path argument \'$key\' in path \'$path\' when calling method \'$methodName\'');
-        parts[i] = '$argument';
-        keys.add(key);
-        processed.add(part);
-      }
-    }
-
-    for (final key in arguments.keys) {
-      if (!processed.add(key)) {
-        throw StateError(
-            'Path argument \'$key\' from $kind arguments was not be found in path \'$path\' when calling method \'$methodName\'');
-      }
-    }
-
-    return parts.join('/');
-  }
-
-  String _buildQueryString(String methodName, Map<String, dynamic> arguments) {
-    for (final key in arguments.keys) {
-      final argument = arguments[key];
-      final type = argument.runtimeType;
-      _checkArgumentType(type,
-          'Invalid type \'$type\' of query argument \'$key\' when calling method \'$methodName\'');
-    }
-
-    return '?' +
-        Uri(queryParameters: arguments.map((k, v) => MapEntry(k, '$v'))).query;
-  }
-
-  void _checkArgumentType(Type type, String error) {
-    switch (type) {
-      case bool:
-      case double:
-      case int:
-      case num:
-      case String:
-        break;
-      default:
-        throw StateError(error);
     }
   }
 }
@@ -339,50 +236,19 @@ What if we need not 3 procedures, but much more?
 
 How to implement it quickly and conveniently and without errors?  
 
-First you need to describe the interaction interfaces:
-
-```dart
-import 'package:rpc_gen/rpc_meta.dart';
-
-part 'example_rpc.g.dart';
-
-const _path = '/example_api/v1/';
-
-@RpcService(host: 'http://exmaple.com', serverPort: 8002)
-abstract class ExampleApi {
-  @RpcMethod(path: _path + 'add', authorize: true)
-  Future<int> add({required int x, required int y});
-}
-
-```
-
-Based on this code (in fact, interfaces), classes for work on the server and client will be generated.
-
-List of generated classes:
-
-- ExampleApiClient
-- ExampleApiHandler
-- ExampleApiMethod
-- ExampleApiTransport
-- ExampleApiUtils
-
-All of these classes contain stubs for client and server procedures.  
-
-An interface is also generated for organizing the sending of calls from the client to the server (the so-called transport). You write yourself the implementation you need and, in particular, you can create a universal base transport class if you need to work with different services (API).
-
-And, of course, for the convenience of processing on the server, convenient metadata classes for the procedures used have been created. This gives maximum flexibility in the choice of processing methods. They are also available on the client and can be used in transport class (and not only there) if you need it.
-
-A utility class is also generated. At the moment it only allows getting a list of procedure metadata.
-
-So it's time to take a look at the generated classes (there is not so much source code).  
+[example.dart](https://github.com/mezoni/rpc_gen/blob/main/example/example.dart)
 
 ```dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'custom_http_json_transport.dart';
-import 'example_rpc.dart';
+import 'package:http/src/response.dart';
+import 'package:rpc_gen/rpc_meta.dart';
+
+import '_http_transport.dart';
+
+part 'example.g.dart';
 
 void main() async {
   // Schedule a delayed client launch
@@ -395,11 +261,11 @@ void main() async {
   await _serve();
 }
 
-bool development = true;
-
 const secretHeaderKey = 'SECRET';
 
 const secretToken = '123';
+
+bool development = true;
 
 String? globalSecret;
 
@@ -437,7 +303,26 @@ Future<void> _serve() async {
 
         final source = await utf8.decodeStream(request);
         final data = jsonDecode(source);
-        final result = await handler.handle(method.name, data);
+        Map<String, dynamic>? positionalArguments;
+        Map<String, dynamic>? namedArguments;
+        if (data is Map) {
+          final p = data['p'];
+          if (p is Map<String, dynamic>) {
+            positionalArguments = p;
+          }
+
+          final n = data['n'];
+          if (n is Map<String, dynamic>) {
+            namedArguments = n;
+          }
+        }
+
+        if (positionalArguments == null || namedArguments == null) {
+          throw StateError('Invalid data format');
+        }
+
+        final result = await handler.handle(
+            method.name, positionalArguments, namedArguments);
         response.headers.add('Content-Type', 'application/json');
         response.write(jsonEncode(result));
       } else {
@@ -451,8 +336,33 @@ Future<void> _serve() async {
   }
 }
 
-/// Transport, for demonstration only
-class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
+class Client extends ExampleApiClient {
+  Client() : super(ClientTransport());
+}
+
+class ClientTransport extends Transport with ExampleApiTransport {
+  ClientTransport()
+      : super(host: ExampleApiConfig.host, port: ExampleApiConfig.clientPort);
+}
+
+@RpcService(host: 'http://exmaple.com', serverPort: 8002)
+abstract class ExampleApi {
+  @RpcMethod(path: '/api/v1/add', authorize: true)
+  Future<int> add({required int x, required int y});
+}
+
+class ServerHandler extends ExampleApiHandler {
+  ServerHandler() : super(ServerService());
+}
+
+class ServerService extends ExampleApi {
+  @override
+  Future<int> add({required int x, required int y}) async {
+    return x + y;
+  }
+}
+
+class Transport extends HttpTransport with ExampleApiTransport {
   @override
   final String host;
 
@@ -463,8 +373,28 @@ class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
       : host = development ? 'http://localhost' : host;
 
   @override
-  Future<CustomRequest> preprocess(String method, String path, data) async {
-    final request = await super.preprocess(method, path, data);
+  Future postprocess(RpcRequest request, Response response) async {
+    switch (response.statusCode) {
+      case 200:
+        return jsonDecode(response.body);
+      default:
+        throw StateError(
+            'Bad response: ${response.statusCode}\n${response.body}');
+    }
+  }
+
+  @override
+  Future<RpcRequest> preprocess(
+      String name,
+      String httpMethod,
+      String path,
+      Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments) async {
+    final body = {'p': positionalArguments, 'n': namedArguments};
+    final url =
+        port == null ? Uri.parse('$host$path') : Uri.parse('$host:$port$path');
+    final request = RpcRequest(url: url, body: body);
+    request.headers['Content-Type'] = 'application/json';
     if (globalSecret != null) {
       request.headers[secretHeaderKey] = secretToken;
     }
@@ -473,34 +403,124 @@ class Transport extends CustomHttpJsonTransport with ExampleApiTransport {
   }
 }
 
+```
+
+Based on this code (in fact, interfaces), classes for work on the server and client will be generated.
+
+List of generated classes:
+
+- ExampleApiClient
+- ExampleApiHandler
+- ExampleApiMethod
+- ExampleApiTransport
+- ExampleApiUtils
+
+All of these classes contain stubs for client and server procedures.  
+
+An interface is also generated for organizing the sending of calls from the client to the server (the so-called transport). You write yourself the implementation you need and, in particular, you can create a universal base transport class if you need to work with different services (API).
+
+And, of course, for the convenience of processing on the server, convenient metadata classes for the procedures used have been created. This gives maximum flexibility in the choice of processing methods. They are also available on the client and can be used in transport class (and not only there) if you need it.
+
+A utility class is also generated. At the moment it only allows getting a list of procedure metadata.
+
+So it's time to take a look at the generated classes (there is not so much source code).  
+
+[example.g.dart](https://github.com/mezoni/rpc_gen/blob/main/example/example.g.dart)
+
+```dart
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'example.dart';
+
 // **************************************************************************
-// Our own client, handwritten
+// RpcGenerator
 // **************************************************************************
 
-class Client extends ExampleApiClient {
-  Client() : super(ClientTransport());
-}
+class ExampleApiClient implements ExampleApi {
+  ExampleApiClient(this._transport);
 
-/// Client transport implementation
-class ClientTransport extends Transport with ExampleApiTransport {
-  ClientTransport()
-      : super(host: ExampleApiConfig.host, port: ExampleApiConfig.clientPort);
-}
+  final ExampleApiTransport _transport;
 
-// **************************************************************************
-// Our own server, handwritten
-// **************************************************************************
-
-/// ServerHandler
-class ServerHandler extends ExampleApiHandler {
-  ServerHandler() : super(ServerService());
-}
-
-/// ServerService
-class ServerService extends ExampleApi {
   @override
   Future<int> add({required int x, required int y}) async {
-    return x + y;
+    final $1 = <String, dynamic>{};
+    final $2 = <String, dynamic>{};
+    $2['x'] = x;
+    $2['y'] = y;
+    final $0 = await _transport.send('add', 'POST', '/api/v1/add', $1, $2);
+    return $0 as int;
+  }
+}
+
+class ExampleApiConfig {
+  static const int? clientPort = 8002;
+
+  static const String host = 'http://exmaple.com';
+
+  static const int? serverPort = 8002;
+}
+
+class ExampleApiHandler {
+  ExampleApiHandler(this._handler);
+
+  final ExampleApi _handler;
+
+  Future handle(String name, Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments) async {
+    switch (name) {
+      case 'add':
+        final $0 = namedArguments['x'] as int;
+        final $1 = namedArguments['y'] as int;
+        final $2 = await _handler.add(x: $0, y: $1);
+        return $2;
+      default:
+        throw StateError('Unknown remote procedure: \'$name\'');
+    }
+  }
+}
+
+class ExampleApiMethod {
+  const ExampleApiMethod(
+      {required this.authorize,
+      required this.method,
+      required this.name,
+      required this.namedParameters,
+      required this.positionalParameters,
+      required this.path});
+
+  final bool authorize;
+
+  final String method;
+
+  final String name;
+
+  final List<String> namedParameters;
+
+  final List<String> positionalParameters;
+
+  final String path;
+}
+
+abstract class ExampleApiTransport {
+  Future send(
+      String name,
+      String httpMethod,
+      String path,
+      Map<String, dynamic> positionalArguments,
+      Map<String, dynamic> namedArguments);
+}
+
+abstract class ExampleApiUtils {
+  static List<ExampleApiMethod> getMethods() {
+    return const [
+      ExampleApiMethod(
+          authorize: true,
+          method: 'POST',
+          name: 'add',
+          namedParameters: [],
+          path: '/api/v1/add',
+          positionalParameters: [])
+    ];
   }
 }
 
